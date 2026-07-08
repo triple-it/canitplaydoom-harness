@@ -39,6 +39,8 @@ def _cmd_run(args: argparse.Namespace) -> int:
         model_meta={"name": args.model, "provider": provider, "params": None},
         modality=args.modality,
         render_video=not args.no_video,
+        grid_rows=args.grid_rows,
+        grid_cols=args.grid_cols,
     )
     print(json.dumps(manifest["scores"], indent=2))
     print(f"Bundle written to: {args.out}")
@@ -89,6 +91,8 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--max-steps", type=int, default=500)
     run.add_argument("--max-tokens-per-step", type=int, default=64)
     run.add_argument("--seed", type=int, default=12345)
+    run.add_argument("--grid-rows", type=int, default=32)
+    run.add_argument("--grid-cols", type=int, default=64)
     run.add_argument("--out", required=True)
     run.add_argument("--no-video", action="store_true")
     run.set_defaults(func=_cmd_run)

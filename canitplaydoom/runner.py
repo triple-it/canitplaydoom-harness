@@ -80,6 +80,8 @@ def run_benchmark(
     model_meta: dict,
     modality: str = "ascii",
     render_video: bool = True,
+    grid_rows: int = 32,
+    grid_cols: int = 64,
 ) -> dict:
     """Run the benchmark and write a bundle to ``out_dir``. Returns the manifest."""
     scenario = get_scenario(scenario_name)
@@ -112,7 +114,8 @@ def run_benchmark(
                     break
 
                 labels = [LabelInfo(l.value, l.object_name) for l in state.labels]
-                obs = encode(state.labels_buffer, labels, state.depth_buffer)
+                obs = encode(state.labels_buffer, labels, state.depth_buffer,
+                             rows=grid_rows, cols=grid_cols)
                 decision = agent.act(obs, LEGEND, scenario.allowed_actions)
 
                 if render_video and state.screen_buffer is not None:
@@ -187,7 +190,7 @@ def run_benchmark(
         "scenario_cfg_sha256": sha256_file(cfg_path),
         "seed": seed,
         "modality": modality,
-        "grid": {"rows": 32, "cols": 64, "legend": LEGEND},
+        "grid": {"rows": grid_rows, "cols": grid_cols, "legend": LEGEND},
         "model": model_meta,
         "episodes": episodes,
         "max_steps": max_steps,

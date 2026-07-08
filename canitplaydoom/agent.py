@@ -66,6 +66,78 @@ def parse_action(text: str, allowed_actions: list[str], default: str) -> tuple[s
     return default, False
 
 
+class OllamaAgent:
+    """Native Ollama /api/chat agent.
+
+    Uses Ollama's native endpoint so we can set ``think: false`` for reasoning
+    models (e.g. qwen3), which the OpenAI-compatible endpoint ignores. Uses only
+    the standard library to avoid extra dependencies.
+    """
+
+    def __init__(
+        self,
+        model: str,
+        base_url: str,
+        think: bool = False,
+        temperature: float = 0.2,
+        max_tokens_per_step: int = 128,
+        timeout: int = 120,
+    ):
+        root = base_url.rstrip("/")
+        if root.endswith("/v1"):
+            root = root[: -len("/v1")]
+        self.api_url = root + "/api/chat"
+        self.model = model
+        self.think = think
+        self.temperature = temperature
+        self.max_tokens_per_step = max_tokens_per_step
+        self.timeout = timeout
+
+    def act(self, observation: str, legend: dict, allowed_actions: list[str]) -> Decision:
+        import json as _json
+        import urllib.request
+
+        prompt = build_prompt(observation, legend, allowed_actions)
+        default = allowed_actions[0]
+        payload = {
+            "model": self.model,
+            "stream": False,
+            "think": self.think,
+            "options": {"temperature": self.temperature, "num_predict": self.max_tokens_per_step},
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+        }
+        raw = ""
+        prompt_tokens = completion_tokens = 0
+        start = time.time()
+        try:
+            req = urllib.request.Request(
+                self.api_url,
+                data=_json.dumps(payload).encode(),
+                headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                data = _json.loads(resp.read().decode())
+            raw = (data.get("message") or {}).get("content", "") or ""
+            prompt_tokens = data.get("prompt_eval_count", 0) or 0
+            completion_tokens = data.get("eval_count", 0) or 0
+        except Exception as exc:  # noqa: BLE001
+            raw = f"__error__: {exc}"
+
+        latency_ms = int((time.time() - start) * 1000)
+        action, parse_ok = parse_action(raw, allowed_actions, default)
+        return Decision(
+            action=action,
+            raw_response=raw,
+            latency_ms=latency_ms,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            parse_ok=parse_ok,
+        )
+
+
 class Agent:
     """OpenAI-compatible chat agent."""
 

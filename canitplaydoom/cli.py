@@ -8,17 +8,27 @@ import sys
 
 
 def _cmd_run(args: argparse.Namespace) -> int:
-    from .agent import Agent
+    from .agent import Agent, OllamaAgent
     from .runner import run_benchmark
 
-    provider = "ollama" if "11434" in args.base_url else "openrouter"
-    agent = Agent(
-        model=args.model,
-        base_url=args.base_url,
-        api_key_env=args.api_key_env,
-        temperature=args.temperature,
-        max_tokens_per_step=args.max_tokens_per_step,
-    )
+    if args.api == "ollama":
+        provider = "ollama"
+        agent = OllamaAgent(
+            model=args.model,
+            base_url=args.base_url,
+            think=args.think,
+            temperature=args.temperature,
+            max_tokens_per_step=args.max_tokens_per_step,
+        )
+    else:
+        provider = "ollama" if "11434" in args.base_url else "openrouter"
+        agent = Agent(
+            model=args.model,
+            base_url=args.base_url,
+            api_key_env=args.api_key_env,
+            temperature=args.temperature,
+            max_tokens_per_step=args.max_tokens_per_step,
+        )
     manifest = run_benchmark(
         scenario_name=args.scenario,
         agent=agent,
@@ -69,6 +79,10 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--modality", default="ascii", choices=["ascii"])
     run.add_argument("--base-url", default="http://localhost:11434/v1")
     run.add_argument("--model", required=True)
+    run.add_argument("--api", choices=["openai", "ollama"], default="openai",
+                     help="'openai' (OpenAI-compatible, incl. OpenRouter) or 'ollama' (native /api/chat)")
+    run.add_argument("--think", action="store_true",
+                     help="Enable model 'thinking' (default off; only used with --api ollama)")
     run.add_argument("--api-key-env", default=None)
     run.add_argument("--temperature", type=float, default=0.2)
     run.add_argument("--episodes", type=int, default=5)

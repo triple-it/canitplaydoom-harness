@@ -105,7 +105,7 @@ A submission bundle is a directory (committed to `canitplaydoom-data`, kept tiny
 
 ```
 <bundle>/
-  demo.lmp            # ViZDoom deterministic recording (authoritative proof)
+  demo_000.lmp        # ViZDoom recording, one per episode (demo_<ep>.lmp)
   run_log.jsonl       # per-step game state
   llm_decisions.jsonl # per-step model I/O
   manifest.json       # metadata + scores + hashes
@@ -144,7 +144,7 @@ A submission bundle is a directory (committed to `canitplaydoom-data`, kept tiny
 }
 ```
 
-The `bundle_sha256` is computed over the sorted contents of `demo.lmp`, `run_log.jsonl`, `llm_decisions.jsonl`, and the manifest body (excluding the hash field itself).
+The `bundle_sha256` is computed over the sorted contents of all bundle files (the `demo_*.lmp` recordings and the two `.jsonl` logs) plus the manifest body, excluding `manifest.json`, the video (`*.mp4`), and the hash field itself.
 
 ---
 
@@ -177,10 +177,23 @@ Worked example: `frags=12`, `survival_tics=1840`, `deaths=1`, `accuracy=0.41`
 
 ## 8. Verification
 
-- **Replay:** `verify <bundle>` runs `replay_episode(demo.lmp)` in the pinned engine and recomputes `scores` from the replay.
-- **Pass criteria:** recomputed scores match the manifest within a small tolerance; `scenario_cfg_sha256` / `wad_sha256` match the pinned assets; `bundle_sha256` is valid.
-- **Consistency:** the number/order of actions in `llm_decisions.jsonl` and `run_log.jsonl` must correspond to the demo's inputs.
-- This same command is the basis for Phase-2 automated CI re-verification.
+`verify <bundle>` replays every `demo_*.lmp` in the pinned engine
+(`Mode.SPECTATOR`, as ViZDoom requires for correct playback) and validates the
+bundle.
+
+- **v0.1 (Phase 1) HARD checks (determine pass/fail):**
+  - `bundle_sha256` is valid.
+  - `scenario_cfg_sha256` matches the pinned scenario asset.
+  - every demo loads and replays without error.
+- **SOFT / informational check:** the replay's recomputed scores vs the manifest.
+  Requiring an exact match is deferred to Phase 2 because exact replay
+  determinism depends on the engine build (see `KNOWN_LIMITATIONS.md`; ViZDoom
+  PRs #672/#673 on animated-texture/audio determinism).
+- **Phase 2:** pin a fully deterministic engine build and promote the score-match
+  to a hard, automated CI re-verification.
+
+Recording note: the harness finalizes the last recording with a trailing
+`new_episode()` before `close()`, as required to flush the demo to disk.
 
 ---
 

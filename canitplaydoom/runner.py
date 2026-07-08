@@ -35,7 +35,7 @@ def _now_iso() -> str:
     return _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _build_game(scenario, seed: int, record_visuals: bool):
+def _build_game(scenario, seed: int, record_visuals: bool, mode=None):
     import vizdoom as vzd
 
     game = vzd.DoomGame()
@@ -46,7 +46,7 @@ def _build_game(scenario, seed: int, record_visuals: bool):
     if record_visuals:
         game.set_screen_format(vzd.ScreenFormat.RGB24)
     game.set_window_visible(False)
-    game.set_mode(vzd.Mode.PLAYER)
+    game.set_mode(mode if mode is not None else vzd.Mode.PLAYER)
     game.set_seed(seed)
     for extra in ("KILLCOUNT", "HITCOUNT", "HEALTH", "AMMO2"):
         var = getattr(vzd.GameVariable, extra, None)
@@ -165,15 +165,13 @@ def run_benchmark(
                 shots=shots,
                 hits=hits,
             ))
+        # A trailing new_episode() is required to stop and flush the last
+        # recording to disk before closing (see ViZDoom record_episodes example).
+        game.new_episode()
     finally:
         run_log.close()
         dec_log.close()
         game.close()
-
-    # Canonical demo alias for the first episode.
-    first_demo = out / "demo_000.lmp"
-    if first_demo.exists() and not (out / "demo.lmp").exists():
-        (out / "demo.lmp").write_bytes(first_demo.read_bytes())
 
     if render_video and frames:
         _write_video(out / "run.mp4", frames)

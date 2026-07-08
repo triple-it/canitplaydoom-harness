@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "canitplaydoom"
+version = "0.1.0"
+description = "Reference harness for the Can It Play DOOM? AI game benchmark"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "numpy>=1.24",
+    "openai>=1.30",
+]
+
+[project.optional-dependencies]
+engine = ["vizdoom>=1.2.0", "opencv-python>=4.8"]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+canitplaydoom = "canitplaydoom.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["canitplaydoom*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

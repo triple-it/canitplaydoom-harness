@@ -1,0 +1,4 @@
+vizdoom>=1.2.0
+numpy>=1.24
+opencv-python>=4.8
+openai>=1.30

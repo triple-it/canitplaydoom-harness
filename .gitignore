@@ -8,3 +8,8 @@ dist/
 bundles/
 *.mp4
 .pytest_cache/
+
+# ViZDoom runtime-generated config
+_vizdoom.ini
+_vizdoom/
+*.ini

@@ -118,10 +118,18 @@ def run_benchmark(
                              rows=grid_rows, cols=grid_cols)
                 decision = agent.act(obs, LEGEND, scenario.allowed_actions)
 
-                if render_video and state.screen_buffer is not None:
-                    frames.append(state.screen_buffer)
-
-                game.make_action(action_vectors[decision.action], scenario.frame_skip)
+                vec = action_vectors[decision.action]
+                if render_video:
+                    # Capture every tic so the video is smooth and at true game speed.
+                    for _ in range(scenario.frame_skip):
+                        if game.is_episode_finished():
+                            break
+                        game.make_action(vec, 1)
+                        st = game.get_state()
+                        if st is not None and st.screen_buffer is not None:
+                            frames.append(st.screen_buffer)
+                else:
+                    game.make_action(vec, scenario.frame_skip)
 
                 cur_ammo = _safe_get_var(game, "AMMO2")
                 if decision.action == "attack" and prev_ammo is not None and cur_ammo is not None:
